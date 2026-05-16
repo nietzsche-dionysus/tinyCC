@@ -30,6 +30,25 @@ typedef struct {
     int beginColumn;
 } Token;
 
+typedef struct tinyCC
+{
+    int type;
+    char name[256];
+    int row;
+    int column;
+}Variable;
+
+#define MAX_VARIABLE 100
+Variable vVariable[MAX_VARIABLE];
+int Variable_count;
+void add_Variable(Variable v){
+    if(Variable_count<MAX_VARIABLE){
+        vVariable[Variable_count]=v;
+        Variable_count++;
+    }
+}
+
+
 #define RE_WHITESPACE  "[ \t\n\r]+"
 #define RE_SINGLE_COMMENT "//[^\n\r]*(\n|\r|\r\n)?"
 #define RE_MULTI_COMMENT  "/\\*([^*]|\\*[^/])*\\*/"
@@ -237,9 +256,22 @@ void Program() {
 }
 
 void DeclareSentence(){
+    Token t;
+    Variable v;
     expect(TOKEN_INT);
+    
+    t=current_token;
+
     expect(TOKEN_IDENTIFIER);
     expect(TOKEN_SEMICOLON);
+
+    v.type=1;
+    strcmp(v.name,t.image);
+    v.row=t.beginLine;
+    v.column=t.beginColumn;
+
+    add_Variable(v);
+    printf("定义了一个整型变量： %s,它的类型是： %d\n",t.image,v.type);
 }
 
 int main(int argc, char *argv[]) {
@@ -254,6 +286,7 @@ int main(int argc, char *argv[]) {
     
     Program();
     
+    printf("共定义了%d个变量!\n",Variable_count);
     printf("Parser Success!\n");
     
     free(buffer);
