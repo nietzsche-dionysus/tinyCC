@@ -22,5 +22,5 @@ void qt_setResult(QTInfo *qt,const char* result){
 }
 
 void qt_print(QTInfo *qt){
-    printf("%d:(%s, %s, %s, %s )\n",qt->innerId,qt->operator,qt->arg1,qt->arg2,qt->result);
+    printf("%d:(%s\t,%s\t,%s\t,%s\t)\n",qt->innerId,qt->operator,qt->arg1,qt->arg2,qt->result);
 }

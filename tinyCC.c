@@ -7,6 +7,7 @@
 #include "VariableTable.h"
 #include "QTInfo.h"
 #include "QTList.h"
+#include "VariableNameGenerator.h"
 
 #define STATIC 1
 #define UNICODE_INPUT 1
@@ -18,7 +19,7 @@ typedef enum {
     TOKEN_INT, TOKEN_DOUBLE, TOKEN_FLOAT, TOKEN_STRING, TOKEN_CHAR,
     TOKEN_VOID, TOKEN_MAIN,
 
-    TOKEN_ASSIGN,
+    TOKEN_ASSIGN,TOKEN_MUL,TOKEN_DIV,TOKEN_QUEUE,
 
     TOKEN_LC, TOKEN_RC, TOKEN_LM, TOKEN_RM, TOKEN_LB, TOKEN_RB,
     TOKEN_COMMA, TOKEN_SEMICOLON, TOKEN_COLON,
@@ -65,6 +66,7 @@ int current_column = 0;
 void DeclareSentence();
 void AssignSentence();
 char* UnaryExpression();
+char* MultiplicativeExpression();
 
 int regex_match(const char *pattern, const char *text, regmatch_t *pmatch) {
     regex_t regex;
@@ -170,6 +172,18 @@ Token get_next_token() {
     }
     if (regex_match("^=", text, &match) == 0 && match.rm_so == 0) {
         token.type = TOKEN_ASSIGN; strcpy(token.image, "="); 
+        current_pos += 1; current_column += 1; return token;
+    }
+    if (regex_match("^\\*", text, &match) == 0 && match.rm_so == 0) {
+        token.type = TOKEN_MUL; strcpy(token.image, "*"); 
+        current_pos += 1; current_column += 1; return token;
+    }
+    if (regex_match("^/", text, &match) == 0 && match.rm_so == 0) {
+        token.type = TOKEN_DIV; strcpy(token.image, "/"); 
+        current_pos += 1; current_column += 1; return token;
+    }
+    if (regex_match("^%", text, &match) == 0 && match.rm_so == 0) {
+        token.type = TOKEN_QUEUE; strcpy(token.image, "%"); 
         current_pos += 1; current_column += 1; return token;
     }
 
@@ -306,13 +320,42 @@ void AssignSentence(){
 
     expect(TOKEN_ASSIGN);
 
-    strcpy(middle,UnaryExpression());
+    strcpy(middle,MultiplicativeExpression());
 
     expect(TOKEN_SEMICOLON);
-    if(strcmp(first,"")!=0&&strcmp(middle,"")!=0){
-        QTInfo* qtInfo=qt_create("=",middle,"_",first);
+    
+    QTInfo* qtInfo=qt_create("=",middle,"_",first);
+    qtl_add(&qtList,qtInfo);
+}
+
+char* MultiplicativeExpression(){
+    char *first;
+    char *middle;
+    char *temp;
+    Token op;
+    static char result[256];
+
+    first=UnaryExpression();
+    strcpy(result,first);
+
+    while(current_token.type==TOKEN_MUL||
+          current_token.type==TOKEN_DIV||
+          current_token.type==TOKEN_QUEUE){
+        op=current_token;
+        expect(current_token.type);
+
+        middle=UnaryExpression();
+
+        temp=vng_gen();
+
+        QTInfo *qtInfo=qt_create(op.image,first,middle,temp);
         qtl_add(&qtList,qtInfo);
+
+        strcpy(result,temp);
+        first=result;
     }
+
+    return result;
 }
 
 char* UnaryExpression(){
@@ -323,22 +366,18 @@ char* UnaryExpression(){
         t=current_token;
         expect(TOKEN_IDENTIFIER);
 
-        int i=vt_assignmentJudge(&vt,t.image);
-
-        if(i==SUCCESS){
-            strcpy(result,t.image);
-            return result;
-        }
-        else return "";
-    }
-    else if(current_token.type==TOKEN_INTEGER_LITERAL){
-        t=current_token;
-        expect(TOKEN_INTEGER_LITERAL);
+        vt_assignmentJudge(&vt,t.image);
 
         strcpy(result,t.image);
         return result;
     }
-    else return NULL;
+    else if(current_token.type==TOKEN_INTEGER_LITERAL){
+        t=current_token;
+        expect(TOKEN_INTEGER_LITERAL);
+        strcpy(result,t.image);
+        return result;
+    }
+    else exit(1);
 }
 
 int main(int argc, char *argv[]) {
@@ -349,6 +388,7 @@ int main(int argc, char *argv[]) {
 
     vt_init(&vt);
     qtl_init(&qtList);
+    vng_init(); 
 
     read_file(argv[1]);
     
@@ -357,6 +397,7 @@ int main(int argc, char *argv[]) {
     Program();
     
     printf("共定义了%d个变量!\n",vt.count);
+    vt_print(&vt);
     qtl_print(&qtList);
     printf("Parser Success!\n");
     
