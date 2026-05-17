@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <regex.h>
+#include <stdbool.h>
 
 #define STATIC 1
 #define UNICODE_INPUT 1
@@ -270,8 +271,15 @@ void DeclareSentence(){
     v.row=t.beginLine;
     v.column=t.beginColumn;
 
-    add_Variable(v);
+    bool isExist=false;
+
+    for(int i=0;i<Variable_count;i++){
+        if(strcmp(v.name,vVariable[i].name)==0) isExist=true;
+    }
+    
     printf("定义了一个整型变量： %s,它的类型是： %d\n",t.image,v.type);
+    if(!isExist) add_Variable(v);
+    else printf("变量：%s已经定义!\n",t.image);
 }
 
 int main(int argc, char *argv[]) {
