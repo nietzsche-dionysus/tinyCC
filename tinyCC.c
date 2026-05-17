@@ -5,11 +5,14 @@
 #include <regex.h>
 #include <stdbool.h>
 #include "VariableTable.h"
+#include "QTInfo.h"
+#include "QTList.h"
 
 #define STATIC 1
 #define UNICODE_INPUT 1
 
 VariableTable vt;
+QTList qtList;
 
 typedef enum {
     TOKEN_INT, TOKEN_DOUBLE, TOKEN_FLOAT, TOKEN_STRING, TOKEN_CHAR,
@@ -288,16 +291,28 @@ void AssignSentence(){
     Token t;
     // char *right;
 
+    char first[256];
+    char middle[256];
+
     t=current_token;
     expect(TOKEN_IDENTIFIER);
 
-    vt_assignmentJudge(&vt,t.image);
+    int i=vt_assignmentJudge(&vt,t.image);
+
+    if(i==SUCCESS){
+        strcpy(first,t.image);
+    }
+    else strcpy(first,"");
 
     expect(TOKEN_ASSIGN);
 
-    UnaryExpression();
+    strcpy(middle,UnaryExpression());
 
     expect(TOKEN_SEMICOLON);
+    if(strcmp(first,"")!=0&&strcmp(middle,"")!=0){
+        QTInfo* qtInfo=qt_create("=",middle,"_",first);
+        qtl_add(&qtList,qtInfo);
+    }
 }
 
 char* UnaryExpression(){
@@ -308,10 +323,13 @@ char* UnaryExpression(){
         t=current_token;
         expect(TOKEN_IDENTIFIER);
 
-        vt_assignmentJudge(&vt,t.image);
+        int i=vt_assignmentJudge(&vt,t.image);
 
-        strcpy(result,t.image);
-        return result;
+        if(i==SUCCESS){
+            strcpy(result,t.image);
+            return result;
+        }
+        else return "";
     }
     else if(current_token.type==TOKEN_INTEGER_LITERAL){
         t=current_token;
@@ -320,7 +338,7 @@ char* UnaryExpression(){
         strcpy(result,t.image);
         return result;
     }
-    else exit(1);
+    else return NULL;
 }
 
 int main(int argc, char *argv[]) {
@@ -328,7 +346,10 @@ int main(int argc, char *argv[]) {
         printf("Usage: %s <input_file>\n", argv[0]);
         return 1;
     }
-    
+
+    vt_init(&vt);
+    qtl_init(&qtList);
+
     read_file(argv[1]);
     
     current_token = get_next_token();
@@ -336,6 +357,7 @@ int main(int argc, char *argv[]) {
     Program();
     
     printf("共定义了%d个变量!\n",vt.count);
+    qtl_print(&qtList);
     printf("Parser Success!\n");
     
     free(buffer);

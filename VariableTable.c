@@ -46,7 +46,7 @@ int vt_assignmentJudge(VariableTable *vt,const char *name){
             return SUCCESS;
         }
     }
-    printf("%s变量未定义",name);
+    printf("%s变量未定义\n",name);
     return UNDEFINED;
 }
 
