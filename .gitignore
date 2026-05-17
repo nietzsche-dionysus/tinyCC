@@ -2,3 +2,4 @@ tiny*
 *.txt
 *.java
 *.o
+VariableTable.o
