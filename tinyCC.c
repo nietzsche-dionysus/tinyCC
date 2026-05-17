@@ -60,6 +60,8 @@ int current_line = 1;
 int current_column = 0;
 
 void DeclareSentence();
+void AssignSentence();
+char* UnaryExpression();
 
 int regex_match(const char *pattern, const char *text, regmatch_t *pmatch) {
     regex_t regex;
@@ -160,7 +162,7 @@ Token get_next_token() {
         current_pos += 1; current_column += 1; return token;
     }
     if (regex_match("^,", text, &match) == 0 && match.rm_so == 0) {
-        token.type = TOKEN_COMMA; strcpy(token.image, "a"); 
+        token.type = TOKEN_COMMA; strcpy(token.image, ","); 
         current_pos += 1; current_column += 1; return token;
     }
     if (regex_match("^=", text, &match) == 0 && match.rm_so == 0) {
@@ -239,8 +241,9 @@ void Program() {
     expect(TOKEN_LC);
     expect(TOKEN_RC);
     expect(TOKEN_LB);
-    while(current_token.type==TOKEN_INT){
-        DeclareSentence();
+    while(current_token.type==TOKEN_INT||current_token.type==TOKEN_IDENTIFIER){
+        if(current_token.type==TOKEN_INT) DeclareSentence();
+        if(current_token.type==TOKEN_IDENTIFIER) AssignSentence();
     }
     expect(TOKEN_RB);
 }
@@ -252,6 +255,8 @@ void DeclareSentence(){
     expect(TOKEN_INT);
     
     t=current_token;
+    expect(TOKEN_IDENTIFIER);
+    
     v.type=1;
     strcpy(v.name,t.image);
     v.row=t.beginLine;
@@ -261,7 +266,6 @@ void DeclareSentence(){
 
     vt_addVariable(&vt,v);
 
-    expect(TOKEN_IDENTIFIER);
     while(current_token.type==TOKEN_COMMA){
         expect(TOKEN_COMMA);
 
@@ -278,6 +282,45 @@ void DeclareSentence(){
         vt_addVariable(&vt,v);
     }
     expect(TOKEN_SEMICOLON);
+}
+
+void AssignSentence(){
+    Token t;
+    // char *right;
+
+    t=current_token;
+    expect(TOKEN_IDENTIFIER);
+
+    vt_assignmentJudge(&vt,t.image);
+
+    expect(TOKEN_ASSIGN);
+
+    UnaryExpression();
+
+    expect(TOKEN_SEMICOLON);
+}
+
+char* UnaryExpression(){
+    Token t;
+    static char result[256];
+
+    if(current_token.type==TOKEN_IDENTIFIER){
+        t=current_token;
+        expect(TOKEN_IDENTIFIER);
+
+        vt_assignmentJudge(&vt,t.image);
+
+        strcpy(result,t.image);
+        return result;
+    }
+    else if(current_token.type==TOKEN_INTEGER_LITERAL){
+        t=current_token;
+        expect(TOKEN_INTEGER_LITERAL);
+
+        strcpy(result,t.image);
+        return result;
+    }
+    else exit(1);
 }
 
 int main(int argc, char *argv[]) {
