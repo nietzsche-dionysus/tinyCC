@@ -50,6 +50,7 @@ typedef struct {
 #define RE_LB          "\\{"
 #define RE_RB          "\\}"
 #define RE_SEMICOLON   ";"
+#define RE_COMMA       ","
 
 FILE *input_file;
 char *buffer = NULL;
@@ -158,6 +159,10 @@ Token get_next_token() {
         token.type = TOKEN_SEMICOLON; strcpy(token.image, ";"); 
         current_pos += 1; current_column += 1; return token;
     }
+    if (regex_match("^,", text, &match) == 0 && match.rm_so == 0) {
+        token.type = TOKEN_COMMA; strcpy(token.image, "a"); 
+        current_pos += 1; current_column += 1; return token;
+    }
     if (regex_match("^=", text, &match) == 0 && match.rm_so == 0) {
         token.type = TOKEN_ASSIGN; strcpy(token.image, "="); 
         current_pos += 1; current_column += 1; return token;
@@ -243,13 +248,10 @@ void Program() {
 void DeclareSentence(){
     Token t;
     Variable v;
+
     expect(TOKEN_INT);
     
     t=current_token;
-
-    expect(TOKEN_IDENTIFIER);
-    expect(TOKEN_SEMICOLON);
-
     v.type=1;
     strcpy(v.name,t.image);
     v.row=t.beginLine;
@@ -257,8 +259,25 @@ void DeclareSentence(){
 
     printf("定义了一个整型变量%s\n",t.image);
 
-   vt_addVariable(&vt,v);
+    vt_addVariable(&vt,v);
 
+    expect(TOKEN_IDENTIFIER);
+    while(current_token.type==TOKEN_COMMA){
+        expect(TOKEN_COMMA);
+
+        t=current_token;
+        expect(TOKEN_IDENTIFIER);
+        
+        v.type=1;
+        strcpy(v.name,t.image);
+        v.row=t.beginLine;
+        v.column=t.beginColumn;
+
+        printf("定义了一个整型变量%s\n",t.image);
+
+        vt_addVariable(&vt,v);
+    }
+    expect(TOKEN_SEMICOLON);
 }
 
 int main(int argc, char *argv[]) {
