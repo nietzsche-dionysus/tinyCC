@@ -69,6 +69,7 @@ void AssignSentence();
 char* UnaryExpression();
 char* MultiplicativeExpression();
 char* AdditiveExpression();
+char* Expression();
 
 int regex_match(const char *pattern, const char *text, regmatch_t *pmatch) {
     regex_t regex;
@@ -327,7 +328,7 @@ void AssignSentence(){
 
     expect(TOKEN_ASSIGN);
 
-    strcpy(middle,AdditiveExpression());
+    strcpy(middle,Expression());
 
     expect(TOKEN_SEMICOLON);
     
@@ -337,6 +338,7 @@ void AssignSentence(){
 
 char* UnaryExpression(){
     Token t;
+    char* first;
     static char result[256];
 
     if(current_token.type==TOKEN_IDENTIFIER){
@@ -352,6 +354,13 @@ char* UnaryExpression(){
         t=current_token;
         expect(TOKEN_INTEGER_LITERAL);
         strcpy(result,t.image);
+        return result;
+    }
+    else if(current_token.type==TOKEN_LC){
+        expect(TOKEN_LC);
+        first=Expression();
+        strcpy(result,first);
+        expect(TOKEN_RC);
         return result;
     }
     else exit(1);
@@ -413,6 +422,14 @@ char* AdditiveExpression(){
         first=result;
     }
 
+    return result;
+}
+
+char* Expression(){
+    char* first;
+    static char result[256];
+    first=AdditiveExpression();
+    strcpy(result,first);
     return result;
 }
 
