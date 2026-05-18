@@ -8,6 +8,7 @@
 #include "QTInfo.h"
 #include "QTList.h"
 #include "VariableNameGenerator.h"
+#include "ConditionValue.h"
 
 #define STATIC 1
 #define UNICODE_INPUT 1
@@ -20,7 +21,8 @@ typedef enum {
     TOKEN_VOID, TOKEN_MAIN,
 
     TOKEN_ASSIGN,TOKEN_MUL,TOKEN_DIV,TOKEN_QUEUE,
-    TOKEN_ADD,TOKEN_MINUS,
+    TOKEN_ADD,TOKEN_MINUS,TOKEN_LT,TOKEN_LE,TOKEN_GT,TOKEN_GE,
+    TOKEN_EQ,TOKEN_NE,TOKEN_AND,TOKEN_OR,TOKEN_NOT,
 
     TOKEN_LC, TOKEN_RC, TOKEN_LM, TOKEN_RM, TOKEN_LB, TOKEN_RB,
     TOKEN_COMMA, TOKEN_SEMICOLON, TOKEN_COLON,
@@ -70,6 +72,7 @@ char* UnaryExpression();
 char* MultiplicativeExpression();
 char* AdditiveExpression();
 char* Expression();
+ConditionValue Condition();
 
 int regex_match(const char *pattern, const char *text, regmatch_t *pmatch) {
     regex_t regex;
@@ -149,6 +152,30 @@ Token get_next_token() {
     token.beginLine = current_line;
     token.beginColumn = current_column;
 
+    if (regex_match("^\\|\\|", text, &match) == 0 && match.rm_so == 0) {
+        token.type = TOKEN_OR; strcpy(token.image, "||"); 
+        current_pos += 2; current_column += 2; return token;
+    }
+    if (regex_match("^<=", text, &match) == 0 && match.rm_so == 0) {
+        token.type = TOKEN_LE; strcpy(token.image, "<="); 
+        current_pos += 2; current_column += 2; return token;
+    }
+    if (regex_match("^>=", text, &match) == 0 && match.rm_so == 0) {
+        token.type = TOKEN_GE; strcpy(token.image, ">="); 
+        current_pos += 2; current_column += 2; return token;
+    }
+    if (regex_match("^==", text, &match) == 0 && match.rm_so == 0) {
+        token.type = TOKEN_EQ; strcpy(token.image, "=="); 
+        current_pos += 2; current_column += 2; return token;
+    }
+    if (regex_match("^!=", text, &match) == 0 && match.rm_so == 0) {
+        token.type = TOKEN_NE; strcpy(token.image, "!="); 
+        current_pos += 2; current_column += 2; return token;
+    }
+    if (regex_match("^&&", text, &match) == 0 && match.rm_so == 0) {
+        token.type = TOKEN_AND; strcpy(token.image, "&&"); 
+        current_pos += 2; current_column += 2; return token;
+    }
     if (regex_match("^\\(", text, &match) == 0 && match.rm_so == 0) {
         token.type = TOKEN_LC; strcpy(token.image, "("); 
         current_pos += 1; current_column += 1; return token;
@@ -195,6 +222,18 @@ Token get_next_token() {
     }
     if (regex_match("^-", text, &match) == 0 && match.rm_so == 0) {
         token.type = TOKEN_MINUS; strcpy(token.image, "-"); 
+        current_pos += 1; current_column += 1; return token;
+    }
+    if (regex_match("^<", text, &match) == 0 && match.rm_so == 0) {
+        token.type = TOKEN_LT; strcpy(token.image, "<"); 
+        current_pos += 1; current_column += 1; return token;
+    }
+    if (regex_match("^>", text, &match) == 0 && match.rm_so == 0) {
+        token.type = TOKEN_GT; strcpy(token.image, ">"); 
+        current_pos += 1; current_column += 1; return token;
+    }
+    if (regex_match("^!", text, &match) == 0 && match.rm_so == 0) {
+        token.type = TOKEN_NOT; strcpy(token.image, "!"); 
         current_pos += 1; current_column += 1; return token;
     }
 
@@ -263,6 +302,25 @@ void expect(TokenType type) {
     }
 }
 
+Token lookahead(int n){
+    int saved_pos=current_pos;
+    int saved_line=current_line;
+    int saved_column=current_column;
+    Token saved_token=current_token;
+
+    Token result;
+    for(int i=0;i<n;i++){
+        result=get_next_token();
+    }
+
+    current_pos=saved_pos;
+    current_line=saved_line;
+    current_column=saved_column;
+    current_token=saved_token;
+
+    return result;
+}
+
 void Program() {
     expect(TOKEN_VOID);
     expect(TOKEN_MAIN);
@@ -271,7 +329,15 @@ void Program() {
     expect(TOKEN_LB);
     while(current_token.type==TOKEN_INT||current_token.type==TOKEN_IDENTIFIER){
         if(current_token.type==TOKEN_INT) DeclareSentence();
-        if(current_token.type==TOKEN_IDENTIFIER) AssignSentence();
+        else if(current_token.type==TOKEN_IDENTIFIER){
+            if(lookahead(1).type==TOKEN_ASSIGN){
+                AssignSentence();
+            }
+            else{
+                Condition();
+                expect(TOKEN_SEMICOLON);
+            }
+        } 
     }
     expect(TOKEN_RB);
 }
@@ -431,6 +497,73 @@ char* Expression(){
     first=AdditiveExpression();
     strcpy(result,first);
     return result;
+}
+
+char* RelationOP(){
+    static char result[8];
+
+    if(current_token.type==TOKEN_GT){
+        expect(TOKEN_GT);
+        strcpy(result,">");
+    }
+    else if(current_token.type==TOKEN_GE){
+        expect(TOKEN_GE);
+        strcpy(result,">=");
+    }
+    else if(current_token.type==TOKEN_LT){
+        expect(TOKEN_LT);
+        strcpy(result,"<");
+    }
+    else if(current_token.type==TOKEN_LE){
+        expect(TOKEN_LE);
+        strcpy(result,"<=");
+    }
+    else if(current_token.type==TOKEN_EQ){
+        expect(TOKEN_EQ);
+        strcpy(result,"==");
+    }
+    else if(current_token.type==TOKEN_NE){
+        expect(TOKEN_NE);
+        strcpy(result,"!=");
+    }
+    else return NULL;
+
+    return result;
+}
+
+ConditionValue Condition(){
+    char* first;
+    char* middle;
+    char* op;
+    ConditionValue value;
+
+    cv_init(&value);
+
+    first=Expression();
+
+    op=RelationOP();
+
+    if(op!=NULL){
+        middle = Expression();
+
+        char fullOp[16]="J";
+        strcat(fullOp,op);
+
+        QTInfo *qtTrue=qt_create(fullOp,first,middle,"T");
+        qtl_add(&qtList,qtTrue);
+        cv_mergeTrue(&value,qtTrue);
+    }
+    else{
+        QTInfo *qtTrue=qt_create("Jnz",first,"_","T");
+        qtl_add(&qtList,qtTrue);
+        cv_mergeTrue(&value,qtTrue);
+    }
+
+    QTInfo *qtFalse=qt_create("J","_","_","F");
+    qtl_add(&qtList,qtFalse);
+    cv_mergeFalse(&value,qtFalse);
+
+    return value;
 }
 
 int main(int argc, char *argv[]) {
