@@ -27,7 +27,7 @@ void cv_mergeTrueCV(ConditionValue *cv,ConditionValue *other){
     }
 }
 
-void cv_mergeFlaseCV(ConditionValue *cv,ConditionValue *other){
+void cv_mergeFalseCV(ConditionValue *cv,ConditionValue *other){
     for(int i=0;i<other->falseCount;i++){
         cv_mergeFalse(cv,other->falseChain[i]);
     }

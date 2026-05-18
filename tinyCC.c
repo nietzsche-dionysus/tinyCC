@@ -74,6 +74,8 @@ char* AdditiveExpression();
 char* Expression();
 ConditionValue Condition();
 ConditionValue ExCondition();
+char* LogicOP();
+ConditionValue LogicCondition();
 
 int regex_match(const char *pattern, const char *text, regmatch_t *pmatch) {
     regex_t regex;
@@ -338,12 +340,12 @@ void Program() {
                 AssignSentence();
             }
             else{
-                Condition();
+                LogicCondition();
                 expect(TOKEN_SEMICOLON);
             }
         }
         else if(current_token.type==TOKEN_LC){
-            ExCondition();
+            LogicCondition();
             expect(TOKEN_SEMICOLON);
         } 
     }
@@ -587,6 +589,52 @@ ConditionValue ExCondition(){
     }
 
     return value;
+}
+
+char* LogicOP(){
+    static char result[8];
+    if(current_token.type==TOKEN_AND){
+        expect(TOKEN_AND);
+        strcpy(result,"&&");
+        return result;
+    }
+    else if(current_token.type==TOKEN_OR){
+        expect(TOKEN_OR);
+        strcpy(result,"||");
+        return result;
+    }
+    else exit(1);
+}
+
+ConditionValue LogicCondition(){
+    ConditionValue value1,value2;
+    char *op;
+
+    value1=ExCondition();
+
+    if(current_token.type==TOKEN_AND||current_token.type==TOKEN_OR){
+        op=LogicOP();
+
+        if(strcmp(op,"&&")==0){
+            cv_backpatchTrueChain(&value1,qtList.count+1);
+        }
+        else if(strcmp(op,"||")==0){
+            cv_backpatchFalseChain(&value1,qtList.count+1);
+        }
+
+        value2=LogicCondition();
+
+        if(strcmp(op,"&&")==0){
+            cv_mergeFalseCV(&value2,&value1);
+        }
+        else if(strcmp(op,"||")==0){
+            cv_mergeTrueCV(&value2,&value1);
+        }
+
+        return value2;
+    }
+
+    return value1;
 }
 
 int main(int argc, char *argv[]) {
