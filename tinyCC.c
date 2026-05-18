@@ -20,6 +20,7 @@ typedef enum {
     TOKEN_VOID, TOKEN_MAIN,
 
     TOKEN_ASSIGN,TOKEN_MUL,TOKEN_DIV,TOKEN_QUEUE,
+    TOKEN_ADD,TOKEN_MINUS,
 
     TOKEN_LC, TOKEN_RC, TOKEN_LM, TOKEN_RM, TOKEN_LB, TOKEN_RB,
     TOKEN_COMMA, TOKEN_SEMICOLON, TOKEN_COLON,
@@ -67,6 +68,7 @@ void DeclareSentence();
 void AssignSentence();
 char* UnaryExpression();
 char* MultiplicativeExpression();
+char* AdditiveExpression();
 
 int regex_match(const char *pattern, const char *text, regmatch_t *pmatch) {
     regex_t regex;
@@ -184,6 +186,14 @@ Token get_next_token() {
     }
     if (regex_match("^%", text, &match) == 0 && match.rm_so == 0) {
         token.type = TOKEN_QUEUE; strcpy(token.image, "%"); 
+        current_pos += 1; current_column += 1; return token;
+    }
+    if (regex_match("^\\+", text, &match) == 0 && match.rm_so == 0) {
+        token.type = TOKEN_ADD; strcpy(token.image, "+"); 
+        current_pos += 1; current_column += 1; return token;
+    }
+    if (regex_match("^-", text, &match) == 0 && match.rm_so == 0) {
+        token.type = TOKEN_MINUS; strcpy(token.image, "-"); 
         current_pos += 1; current_column += 1; return token;
     }
 
@@ -311,21 +321,40 @@ void AssignSentence(){
     t=current_token;
     expect(TOKEN_IDENTIFIER);
 
-    int i=vt_assignmentJudge(&vt,t.image);
+    vt_assignmentJudge(&vt,t.image);
 
-    if(i==SUCCESS){
-        strcpy(first,t.image);
-    }
-    else strcpy(first,"");
+    strcpy(first,t.image);
 
     expect(TOKEN_ASSIGN);
 
-    strcpy(middle,MultiplicativeExpression());
+    strcpy(middle,AdditiveExpression());
 
     expect(TOKEN_SEMICOLON);
     
     QTInfo* qtInfo=qt_create("=",middle,"_",first);
     qtl_add(&qtList,qtInfo);
+}
+
+char* UnaryExpression(){
+    Token t;
+    static char result[256];
+
+    if(current_token.type==TOKEN_IDENTIFIER){
+        t=current_token;
+        expect(TOKEN_IDENTIFIER);
+
+        vt_assignmentJudge(&vt,t.image);
+
+        strcpy(result,t.image);
+        return result;
+    }
+    else if(current_token.type==TOKEN_INTEGER_LITERAL){
+        t=current_token;
+        expect(TOKEN_INTEGER_LITERAL);
+        strcpy(result,t.image);
+        return result;
+    }
+    else exit(1);
 }
 
 char* MultiplicativeExpression(){
@@ -358,26 +387,33 @@ char* MultiplicativeExpression(){
     return result;
 }
 
-char* UnaryExpression(){
-    Token t;
+char* AdditiveExpression(){
+    char* first;
+    char* middle;
+    char* temp;
+    Token op;
     static char result[256];
 
-    if(current_token.type==TOKEN_IDENTIFIER){
-        t=current_token;
-        expect(TOKEN_IDENTIFIER);
+    first=MultiplicativeExpression();
+    strcpy(result,first);
 
-        vt_assignmentJudge(&vt,t.image);
+    while(current_token.type==TOKEN_ADD||
+          current_token.type==TOKEN_MINUS){
+        op=current_token;
+        expect(current_token.type);
 
-        strcpy(result,t.image);
-        return result;
+        middle=MultiplicativeExpression();
+
+        temp=vng_gen();
+
+        QTInfo *qtInfo=qt_create(op.image,first,middle,temp);
+        qtl_add(&qtList,qtInfo);
+
+        strcpy(result,temp);
+        first=result;
     }
-    else if(current_token.type==TOKEN_INTEGER_LITERAL){
-        t=current_token;
-        expect(TOKEN_INTEGER_LITERAL);
-        strcpy(result,t.image);
-        return result;
-    }
-    else exit(1);
+
+    return result;
 }
 
 int main(int argc, char *argv[]) {
