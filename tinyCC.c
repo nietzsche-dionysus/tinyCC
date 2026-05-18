@@ -73,6 +73,7 @@ char* MultiplicativeExpression();
 char* AdditiveExpression();
 char* Expression();
 ConditionValue Condition();
+ConditionValue ExCondition();
 
 int regex_match(const char *pattern, const char *text, regmatch_t *pmatch) {
     regex_t regex;
@@ -327,7 +328,10 @@ void Program() {
     expect(TOKEN_LC);
     expect(TOKEN_RC);
     expect(TOKEN_LB);
-    while(current_token.type==TOKEN_INT||current_token.type==TOKEN_IDENTIFIER){
+    while(current_token.type==TOKEN_INT||
+          current_token.type==TOKEN_IDENTIFIER||
+          current_token.type==TOKEN_LC){
+
         if(current_token.type==TOKEN_INT) DeclareSentence();
         else if(current_token.type==TOKEN_IDENTIFIER){
             if(lookahead(1).type==TOKEN_ASSIGN){
@@ -337,6 +341,10 @@ void Program() {
                 Condition();
                 expect(TOKEN_SEMICOLON);
             }
+        }
+        else if(current_token.type==TOKEN_LC){
+            ExCondition();
+            expect(TOKEN_SEMICOLON);
         } 
     }
     expect(TOKEN_RB);
@@ -562,6 +570,21 @@ ConditionValue Condition(){
     QTInfo *qtFalse=qt_create("J","_","_","F");
     qtl_add(&qtList,qtFalse);
     cv_mergeFalse(&value,qtFalse);
+
+    return value;
+}
+
+ConditionValue ExCondition(){
+    ConditionValue value;
+
+    if(current_token.type==TOKEN_LC){
+        expect(TOKEN_LC);
+        value=Condition();
+        expect(TOKEN_RC);
+    }
+    else{
+        value=Condition();
+    }
 
     return value;
 }
