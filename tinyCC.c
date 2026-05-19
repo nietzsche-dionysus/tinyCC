@@ -661,7 +661,7 @@ void Conditionalstatements(){
     expect(TOKEN_RC);
 
     if(current_token.type==TOKEN_LB){
-        Conditionalstatements();
+        StatementBlock();
     }
     else{
         if(current_token.type==TOKEN_IDENTIFIER){
