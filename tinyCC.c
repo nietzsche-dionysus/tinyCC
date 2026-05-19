@@ -18,7 +18,7 @@ QTList qtList;
 
 typedef enum {
     TOKEN_INT, TOKEN_DOUBLE, TOKEN_FLOAT, TOKEN_STRING, TOKEN_CHAR,
-    TOKEN_VOID, TOKEN_MAIN,
+    TOKEN_VOID, TOKEN_MAIN,TOKEN_IF,
 
     TOKEN_ASSIGN,TOKEN_MUL,TOKEN_DIV,TOKEN_QUEUE,
     TOKEN_ADD,TOKEN_MINUS,TOKEN_LT,TOKEN_LE,TOKEN_GT,TOKEN_GE,
@@ -76,6 +76,8 @@ ConditionValue Condition();
 ConditionValue ExCondition();
 char* LogicOP();
 ConditionValue LogicCondition();
+void StatementBlock();
+void Conditionalstatements();
 
 int regex_match(const char *pattern, const char *text, regmatch_t *pmatch) {
     regex_t regex;
@@ -262,6 +264,7 @@ Token get_next_token() {
         else if (strcmp(token.image, "char") == 0) token.type = TOKEN_CHAR;
         else if (strcmp(token.image, "void") == 0) token.type = TOKEN_VOID;
         else if (strcmp(token.image, "main") == 0) token.type = TOKEN_MAIN;
+        else if (strcmp(token.image, "if")==0) token.type=TOKEN_IF;
         else token.type = TOKEN_IDENTIFIER;
         
         current_pos += len;
@@ -329,10 +332,17 @@ void Program() {
     expect(TOKEN_MAIN);
     expect(TOKEN_LC);
     expect(TOKEN_RC);
+    
+    StatementBlock();
+}
+
+void StatementBlock(){
     expect(TOKEN_LB);
+
     while(current_token.type==TOKEN_INT||
           current_token.type==TOKEN_IDENTIFIER||
-          current_token.type==TOKEN_LC){
+          current_token.type==TOKEN_LC||
+          current_token.type==TOKEN_IF){
 
         if(current_token.type==TOKEN_INT) DeclareSentence();
         else if(current_token.type==TOKEN_IDENTIFIER){
@@ -344,11 +354,15 @@ void Program() {
                 expect(TOKEN_SEMICOLON);
             }
         }
+        else if(current_token.type==TOKEN_IF){
+            Conditionalstatements();
+        }
         else if(current_token.type==TOKEN_LC){
             LogicCondition();
             expect(TOKEN_SEMICOLON);
         } 
     }
+
     expect(TOKEN_RB);
 }
 
@@ -603,7 +617,7 @@ char* LogicOP(){
         strcpy(result,"||");
         return result;
     }
-    else exit(1);
+    else return NULL;
 }
 
 ConditionValue LogicCondition(){
@@ -635,6 +649,33 @@ ConditionValue LogicCondition(){
     }
 
     return value1;
+}
+
+void Conditionalstatements(){
+    ConditionValue value;
+    
+    expect(TOKEN_IF);
+    expect(TOKEN_LC);
+    value=LogicCondition();
+    cv_backpatchTrueChain(&value,qtList.count+1);
+    expect(TOKEN_RC);
+
+    if(current_token.type==TOKEN_LB){
+        Conditionalstatements();
+    }
+    else{
+        if(current_token.type==TOKEN_IDENTIFIER){
+            if(lookahead(1).type==TOKEN_ASSIGN){
+                AssignSentence();
+            }
+            else{
+                LogicCondition();
+                expect(TOKEN_SEMICOLON);
+            }
+        }
+    }
+
+    cv_backpatchFalseChain(&value,qtList.count+1);
 }
 
 int main(int argc, char *argv[]) {
