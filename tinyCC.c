@@ -18,7 +18,7 @@ QTList qtList;
 
 typedef enum {
     TOKEN_INT, TOKEN_DOUBLE, TOKEN_FLOAT, TOKEN_STRING, TOKEN_CHAR,
-    TOKEN_VOID, TOKEN_MAIN,TOKEN_IF,
+    TOKEN_VOID, TOKEN_MAIN,TOKEN_IF,TOKEN_ELSE,
 
     TOKEN_ASSIGN,TOKEN_MUL,TOKEN_DIV,TOKEN_QUEUE,
     TOKEN_ADD,TOKEN_MINUS,TOKEN_LT,TOKEN_LE,TOKEN_GT,TOKEN_GE,
@@ -265,6 +265,7 @@ Token get_next_token() {
         else if (strcmp(token.image, "void") == 0) token.type = TOKEN_VOID;
         else if (strcmp(token.image, "main") == 0) token.type = TOKEN_MAIN;
         else if (strcmp(token.image, "if")==0) token.type=TOKEN_IF;
+        else if (strcmp(token.image, "else")==0) token.type=TOKEN_ELSE;
         else token.type = TOKEN_IDENTIFIER;
         
         current_pos += len;
@@ -653,6 +654,7 @@ ConditionValue LogicCondition(){
 
 void Conditionalstatements(){
     ConditionValue value;
+    QTInfo *qt = NULL; 
     
     expect(TOKEN_IF);
     expect(TOKEN_LC);
@@ -675,7 +677,37 @@ void Conditionalstatements(){
         }
     }
 
-    cv_backpatchFalseChain(&value,qtList.count+1);
+    if(current_token.type==TOKEN_ELSE){
+        expect(TOKEN_ELSE);
+        qt = qt_create("J", "_", "_", "T");
+        qtl_add(&qtList,qt);
+        cv_backpatchFalseChain(&value,qtList.count+1);
+
+        if(current_token.type==TOKEN_LB){
+            StatementBlock();
+        }
+        else{
+            if(current_token.type==TOKEN_IDENTIFIER){
+                if(lookahead(1).type==TOKEN_ASSIGN){
+                    AssignSentence();
+                }
+                else{
+                    LogicCondition();
+                    expect(TOKEN_SEMICOLON);
+                }
+            }
+        }
+    }
+
+    if (qt == NULL) {
+        cv_backpatchFalseChain(&value, qtList.count + 1);
+    } 
+    else {
+        char res[16];
+        sprintf(res, "%d", qtList.count + 1);
+        qt_setResult(qt, res);
+    }
+
 }
 
 int main(int argc, char *argv[]) {
