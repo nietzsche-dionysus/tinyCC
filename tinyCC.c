@@ -18,7 +18,7 @@ QTList qtList;
 
 typedef enum {
     TOKEN_INT, TOKEN_DOUBLE, TOKEN_FLOAT, TOKEN_STRING, TOKEN_CHAR,
-    TOKEN_VOID, TOKEN_MAIN,TOKEN_IF,TOKEN_ELSE,
+    TOKEN_VOID, TOKEN_MAIN,TOKEN_IF,TOKEN_ELSE,TOKEN_WHILE,
 
     TOKEN_ASSIGN,TOKEN_MUL,TOKEN_DIV,TOKEN_QUEUE,
     TOKEN_ADD,TOKEN_MINUS,TOKEN_LT,TOKEN_LE,TOKEN_GT,TOKEN_GE,
@@ -78,6 +78,8 @@ char* LogicOP();
 ConditionValue LogicCondition();
 void StatementBlock();
 void Conditionalstatements();
+void WhileStatements();
+void SingleStatement();
 
 int regex_match(const char *pattern, const char *text, regmatch_t *pmatch) {
     regex_t regex;
@@ -242,6 +244,14 @@ Token get_next_token() {
         current_pos += 1; current_column += 1; return token;
     }
 
+    if (text[0] == '0' && !isdigit(text[1])) {
+        token.type = TOKEN_INTEGER_LITERAL;
+        token.image[0] = '0';
+        token.image[1] = '\0';
+        current_pos += 1;
+        current_column += 1;
+        return token;
+    }
     if (regex_match("^[1-9][0-9]*", text, &match) == 0 && match.rm_so == 0) {
         int len = match.rm_eo;
         strncpy(token.image, text, len);
@@ -266,6 +276,7 @@ Token get_next_token() {
         else if (strcmp(token.image, "main") == 0) token.type = TOKEN_MAIN;
         else if (strcmp(token.image, "if")==0) token.type=TOKEN_IF;
         else if (strcmp(token.image, "else")==0) token.type=TOKEN_ELSE;
+        else if (strcmp(token.image, "while")==0) token.type=TOKEN_WHILE;
         else token.type = TOKEN_IDENTIFIER;
         
         current_pos += len;
@@ -343,28 +354,39 @@ void StatementBlock(){
     while(current_token.type==TOKEN_INT||
           current_token.type==TOKEN_IDENTIFIER||
           current_token.type==TOKEN_LC||
-          current_token.type==TOKEN_IF){
-
-        if(current_token.type==TOKEN_INT) DeclareSentence();
-        else if(current_token.type==TOKEN_IDENTIFIER){
-            if(lookahead(1).type==TOKEN_ASSIGN){
-                AssignSentence();
-            }
-            else{
-                LogicCondition();
-                expect(TOKEN_SEMICOLON);
-            }
-        }
-        else if(current_token.type==TOKEN_IF){
-            Conditionalstatements();
-        }
-        else if(current_token.type==TOKEN_LC){
-            LogicCondition();
-            expect(TOKEN_SEMICOLON);
-        } 
-    }
+          current_token.type==TOKEN_IF||
+          current_token.type==TOKEN_WHILE){
+        
+        SingleStatement();
+    }  
 
     expect(TOKEN_RB);
+
+}
+
+void SingleStatement() {
+    if (current_token.type == TOKEN_INT) {
+        DeclareSentence();
+    }
+    else if (current_token.type == TOKEN_IDENTIFIER) {
+        if (lookahead(1).type == TOKEN_ASSIGN) {
+            AssignSentence();
+        }
+        else {
+            LogicCondition();
+            expect(TOKEN_SEMICOLON);
+        }
+    }
+    else if (current_token.type == TOKEN_IF) {
+        Conditionalstatements();
+    }
+    else if (current_token.type == TOKEN_LC) {
+        LogicCondition();
+        expect(TOKEN_SEMICOLON);
+    }
+    else if (current_token.type == TOKEN_WHILE) {
+        WhileStatements();
+    }
 }
 
 void DeclareSentence(){
@@ -666,15 +688,7 @@ void Conditionalstatements(){
         StatementBlock();
     }
     else{
-        if(current_token.type==TOKEN_IDENTIFIER){
-            if(lookahead(1).type==TOKEN_ASSIGN){
-                AssignSentence();
-            }
-            else{
-                LogicCondition();
-                expect(TOKEN_SEMICOLON);
-            }
-        }
+        SingleStatement();
     }
 
     if(current_token.type==TOKEN_ELSE){
@@ -687,15 +701,7 @@ void Conditionalstatements(){
             StatementBlock();
         }
         else{
-            if(current_token.type==TOKEN_IDENTIFIER){
-                if(lookahead(1).type==TOKEN_ASSIGN){
-                    AssignSentence();
-                }
-                else{
-                    LogicCondition();
-                    expect(TOKEN_SEMICOLON);
-                }
-            }
+            SingleStatement();
         }
     }
 
@@ -707,7 +713,38 @@ void Conditionalstatements(){
         sprintf(res, "%d", qtList.count + 1);
         qt_setResult(qt, res);
     }
+}
 
+void WhileStatements(){
+    ConditionValue value;
+    QTInfo *qt=NULL;
+    int quad;
+
+    expect(TOKEN_WHILE);
+    expect(TOKEN_LC);
+
+    quad=qtList.count+1;
+
+    value=LogicCondition();
+
+    cv_backpatchTrueChain(&value, qtList.count + 1);
+
+    expect(TOKEN_RC);
+
+    if(current_token.type==TOKEN_LB){
+        StatementBlock();
+    }
+    else{
+        SingleStatement();
+    }
+
+    
+    char quadStr[16];
+    sprintf(quadStr,"%d",quad);
+    qt=qt_create("J","_","_",quadStr);
+    qtl_add(&qtList,qt);
+
+    cv_backpatchFalseChain(&value,qtList.count+1);
 }
 
 int main(int argc, char *argv[]) {
