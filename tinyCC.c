@@ -21,6 +21,8 @@ typedef enum {
     TOKEN_VOID, TOKEN_MAIN,TOKEN_IF,TOKEN_ELSE,
     TOKEN_WHILE,TOKEN_DO,
 
+    TOKEN_FOR,TOKEN_ADDONE,TOKEN_MINUSONE,
+
     TOKEN_ASSIGN,TOKEN_MUL,TOKEN_DIV,TOKEN_QUEUE,
     TOKEN_ADD,TOKEN_MINUS,TOKEN_LT,TOKEN_LE,TOKEN_GT,TOKEN_GE,
     TOKEN_EQ,TOKEN_NE,TOKEN_AND,TOKEN_OR,TOKEN_NOT,
@@ -82,6 +84,8 @@ void SingleStatement();
 void Conditionalstatements();
 void WhileStatements();
 void DoWhileStatements();
+void ForStatements();
+void crease();
 
 int regex_match(const char *pattern, const char *text, regmatch_t *pmatch) {
     regex_t regex;
@@ -185,6 +189,14 @@ Token get_next_token() {
         token.type = TOKEN_AND; strcpy(token.image, "&&"); 
         current_pos += 2; current_column += 2; return token;
     }
+    if (regex_match("^\\+\\+", text, &match) == 0 && match.rm_so == 0) {
+        token.type = TOKEN_ADDONE; strcpy(token.image, "+"); 
+        current_pos += 2; current_column += 2; return token;
+    }
+    if (regex_match("^--", text, &match) == 0 && match.rm_so == 0) {
+        token.type = TOKEN_MINUSONE; strcpy(token.image, "+"); 
+        current_pos += 2; current_column += 2; return token;
+    }
     if (regex_match("^\\(", text, &match) == 0 && match.rm_so == 0) {
         token.type = TOKEN_LC; strcpy(token.image, "("); 
         current_pos += 1; current_column += 1; return token;
@@ -280,6 +292,7 @@ Token get_next_token() {
         else if (strcmp(token.image, "else")==0) token.type=TOKEN_ELSE;
         else if (strcmp(token.image, "while")==0) token.type=TOKEN_WHILE;
         else if (strcmp(token.image, "do")==0) token.type=TOKEN_DO;
+        else if (strcmp(token.image, "for")==0) token.type=TOKEN_FOR;
         else token.type = TOKEN_IDENTIFIER;
         
         current_pos += len;
@@ -359,7 +372,8 @@ void StatementBlock(){
           current_token.type==TOKEN_LC||
           current_token.type==TOKEN_IF||
           current_token.type==TOKEN_WHILE||
-          current_token.type==TOKEN_DO){
+          current_token.type==TOKEN_DO||
+          current_token.type==TOKEN_FOR){
         
         SingleStatement();
     }  
@@ -393,6 +407,9 @@ void SingleStatement() {
     }
     else if (current_token.type == TOKEN_DO) {
         DoWhileStatements();
+    }
+    else if (current_token.type == TOKEN_FOR) {
+        ForStatements();
     }
 }
 
@@ -778,6 +795,66 @@ void DoWhileStatements(){
     expect(TOKEN_RC);
 
     expect(TOKEN_SEMICOLON);
+}
+
+void ForStatements(){
+    ConditionValue value;
+    int quad,quad1;
+
+    expect(TOKEN_FOR);
+    expect(TOKEN_LC);
+
+    AssignSentence();
+
+    quad=qtList.count+1;
+
+    value=LogicCondition();
+
+    quad1=qtList.count+1;
+
+    expect(TOKEN_SEMICOLON);
+
+    crease();
+    
+    char quadStr[16];
+    sprintf(quadStr, "%d", quad);
+    QTInfo *qtJump = qt_create("J", "_", "_", quadStr);
+    qtl_add(&qtList, qtJump);
+
+    cv_backpatchTrueChain(&value, qtList.count + 1);
+    
+    expect(TOKEN_RC);
+
+    if (current_token.type == TOKEN_LB) {
+        StatementBlock();
+    }
+    else {
+        SingleStatement();
+    }
+
+    char quad1Str[16];
+    sprintf(quad1Str, "%d", quad1);
+    QTInfo *qtToCrease = qt_create("J", "_", "_", quad1Str);
+    qtl_add(&qtList, qtToCrease);
+
+    cv_backpatchFalseChain(&value, qtList.count + 1);
+}
+
+void crease(){
+    Token first;
+    Token middle;
+    
+    first=current_token;
+
+    expect(TOKEN_IDENTIFIER);
+
+    if(current_token.type==TOKEN_ADDONE||current_token.type==TOKEN_MINUSONE){
+        middle=current_token;
+        expect(current_token.type);
+
+        QTInfo *qt=qt_create(middle.image,first.image,"1",first.image);
+        qtl_add(&qtList,qt);
+    }
 }
 
 int main(int argc, char *argv[]) {
