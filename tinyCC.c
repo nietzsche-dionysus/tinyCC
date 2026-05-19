@@ -18,7 +18,8 @@ QTList qtList;
 
 typedef enum {
     TOKEN_INT, TOKEN_DOUBLE, TOKEN_FLOAT, TOKEN_STRING, TOKEN_CHAR,
-    TOKEN_VOID, TOKEN_MAIN,TOKEN_IF,TOKEN_ELSE,TOKEN_WHILE,
+    TOKEN_VOID, TOKEN_MAIN,TOKEN_IF,TOKEN_ELSE,
+    TOKEN_WHILE,TOKEN_DO,
 
     TOKEN_ASSIGN,TOKEN_MUL,TOKEN_DIV,TOKEN_QUEUE,
     TOKEN_ADD,TOKEN_MINUS,TOKEN_LT,TOKEN_LE,TOKEN_GT,TOKEN_GE,
@@ -77,9 +78,10 @@ ConditionValue ExCondition();
 char* LogicOP();
 ConditionValue LogicCondition();
 void StatementBlock();
+void SingleStatement();
 void Conditionalstatements();
 void WhileStatements();
-void SingleStatement();
+void DoWhileStatements();
 
 int regex_match(const char *pattern, const char *text, regmatch_t *pmatch) {
     regex_t regex;
@@ -277,6 +279,7 @@ Token get_next_token() {
         else if (strcmp(token.image, "if")==0) token.type=TOKEN_IF;
         else if (strcmp(token.image, "else")==0) token.type=TOKEN_ELSE;
         else if (strcmp(token.image, "while")==0) token.type=TOKEN_WHILE;
+        else if (strcmp(token.image, "do")==0) token.type=TOKEN_DO;
         else token.type = TOKEN_IDENTIFIER;
         
         current_pos += len;
@@ -355,7 +358,8 @@ void StatementBlock(){
           current_token.type==TOKEN_IDENTIFIER||
           current_token.type==TOKEN_LC||
           current_token.type==TOKEN_IF||
-          current_token.type==TOKEN_WHILE){
+          current_token.type==TOKEN_WHILE||
+          current_token.type==TOKEN_DO){
         
         SingleStatement();
     }  
@@ -386,6 +390,9 @@ void SingleStatement() {
     }
     else if (current_token.type == TOKEN_WHILE) {
         WhileStatements();
+    }
+    else if (current_token.type == TOKEN_DO) {
+        DoWhileStatements();
     }
 }
 
@@ -745,6 +752,32 @@ void WhileStatements(){
     qtl_add(&qtList,qt);
 
     cv_backpatchFalseChain(&value,qtList.count+1);
+}
+
+void DoWhileStatements(){
+    ConditionValue value;
+    int quad;
+
+    expect(TOKEN_DO);
+    quad=qtList.count+1;
+    if(current_token.type==TOKEN_LB){
+        StatementBlock();
+    }
+    else{
+        SingleStatement();
+    }
+    
+    expect(TOKEN_WHILE);
+    expect(TOKEN_LC);
+
+    value=LogicCondition();
+
+    cv_backpatchTrueChain(&value,quad);
+    cv_backpatchFalseChain(&value,qtList.count+1);
+
+    expect(TOKEN_RC);
+
+    expect(TOKEN_SEMICOLON);
 }
 
 int main(int argc, char *argv[]) {
