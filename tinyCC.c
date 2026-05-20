@@ -23,6 +23,8 @@ typedef enum {
 
     TOKEN_FOR,TOKEN_ADDONE,TOKEN_MINUSONE,
 
+    TOKEN_SCANF,TOKEN_PRINTF,
+
     TOKEN_ASSIGN,TOKEN_MUL,TOKEN_DIV,TOKEN_QUEUE,
     TOKEN_ADD,TOKEN_MINUS,TOKEN_LT,TOKEN_LE,TOKEN_GT,TOKEN_GE,
     TOKEN_EQ,TOKEN_NE,TOKEN_AND,TOKEN_OR,TOKEN_NOT,
@@ -86,6 +88,8 @@ void WhileStatements();
 void DoWhileStatements();
 void ForStatements();
 void crease();
+void InputStatements();
+void OutputStatements();
 
 int regex_match(const char *pattern, const char *text, regmatch_t *pmatch) {
     regex_t regex;
@@ -293,6 +297,8 @@ Token get_next_token() {
         else if (strcmp(token.image, "while")==0) token.type=TOKEN_WHILE;
         else if (strcmp(token.image, "do")==0) token.type=TOKEN_DO;
         else if (strcmp(token.image, "for")==0) token.type=TOKEN_FOR;
+        else if (strcmp(token.image, "scanf")==0) token.type=TOKEN_SCANF;
+        else if (strcmp(token.image, "printf")==0) token.type=TOKEN_PRINTF;
         else token.type = TOKEN_IDENTIFIER;
         
         current_pos += len;
@@ -373,7 +379,9 @@ void StatementBlock(){
           current_token.type==TOKEN_IF||
           current_token.type==TOKEN_WHILE||
           current_token.type==TOKEN_DO||
-          current_token.type==TOKEN_FOR){
+          current_token.type==TOKEN_FOR||
+          current_token.type==TOKEN_SCANF||
+          current_token.type==TOKEN_PRINTF){
         
         SingleStatement();
     }  
@@ -410,6 +418,12 @@ void SingleStatement() {
     }
     else if (current_token.type == TOKEN_FOR) {
         ForStatements();
+    }
+    else if(current_token.type==TOKEN_SCANF){
+        InputStatements();
+    }
+    else if(current_token.type==TOKEN_PRINTF){
+        OutputStatements();
     }
 }
 
@@ -855,6 +869,30 @@ void crease(){
         QTInfo *qt=qt_create(middle.image,first.image,"1",first.image);
         qtl_add(&qtList,qt);
     }
+}
+
+void InputStatements(){
+    Token t;
+    expect(TOKEN_SCANF);
+    expect(TOKEN_LC);
+    t=current_token;
+    expect(TOKEN_IDENTIFIER);
+    expect(TOKEN_RC);
+    expect(TOKEN_SEMICOLON);
+    QTInfo *qt=qt_create("I","_","_",t.image);
+    qtl_add(&qtList,qt);
+}
+
+void OutputStatements(){
+    Token t;
+    expect(TOKEN_PRINTF);
+    expect(TOKEN_LC);
+    t=current_token;
+    expect(TOKEN_IDENTIFIER);
+    expect(TOKEN_RC);
+    expect(TOKEN_SEMICOLON);
+    QTInfo *qt=qt_create("I","_","_",t.image);
+    qtl_add(&qtList,qt);
 }
 
 int main(int argc, char *argv[]) {
