@@ -446,6 +446,14 @@ void DeclareSentence(){
 
     vt_addVariable(&vt,v);
 
+    if(current_token.type==TOKEN_ASSIGN){
+        expect(TOKEN_ASSIGN);
+        char *right = Expression();
+
+        QTInfo *qtInfo = qt_create("=", right, "_", t.image);
+        qtl_add(&qtList, qtInfo);
+    }
+
     while(current_token.type==TOKEN_COMMA){
         expect(TOKEN_COMMA);
 
@@ -460,6 +468,13 @@ void DeclareSentence(){
         printf("定义了一个整型变量%s\n",t.image);
 
         vt_addVariable(&vt,v);
+        if(current_token.type==TOKEN_ASSIGN){
+            expect(TOKEN_ASSIGN);
+            char *right = Expression();
+
+            QTInfo *qtInfo = qt_create("=", right, "_", t.image);
+            qtl_add(&qtList, qtInfo);
+        }
     }
     expect(TOKEN_SEMICOLON);
 }
@@ -920,6 +935,15 @@ int main(int argc, char *argv[]) {
         printf("%s\n", asmCode->lines[i]);
     }
     printf("Parser Success!\n");
+
+    FILE *out = fopen("output.s", "w");
+    if (out) {
+        for (int i = 0; i < asmCode->count; i++) {
+            fprintf(out, "%s\n", asmCode->lines[i]);
+        }
+        fclose(out);
+        printf("\n汇编代码已写入 output.s\n");
+    }
     
     free(buffer);
     return 0;

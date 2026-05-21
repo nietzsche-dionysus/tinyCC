@@ -3,3 +3,5 @@ tiny*
 *.java
 *.o
 VariableTable.o
+*.s
+output

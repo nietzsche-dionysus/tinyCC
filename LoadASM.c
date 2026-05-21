@@ -72,6 +72,7 @@ ASMList* transferASMofUbuntu64(QTList *qtList,VariableTable *vt,int tempVar){
 
     asm_add(&asmList,"    .text");
     asm_add(&asmList,".section    .rodata");
+    asm_add(&asmList, ".LC0:");
     asm_add(&asmList,"    .string    \"%d\"");
     asm_add(&asmList,".LC1:");
     asm_add(&asmList,"    .string    \"%d\\n\"");
@@ -111,7 +112,7 @@ ASMList* transferASMofUbuntu64(QTList *qtList,VariableTable *vt,int tempVar){
             }
             else{
                 index=getMemoryIndex(qt->arg1,vt)+4;
-                sprintf(buf,"    mov    %d(%%rsp), %%rax",index*4);
+                sprintf(buf,"    mov    %d(%%rsp), %%eax",index*4);
                 asm_add(&asmList,buf);
                 index=getMemoryIndex(qt->result,vt)+4;
                 sprintf(buf,"    mov    %%eax, %d(%%rsp)",index*4);
@@ -123,7 +124,7 @@ ASMList* transferASMofUbuntu64(QTList *qtList,VariableTable *vt,int tempVar){
             asm_add(&asmList,buf);
             gen_load_arg(buf,qt->arg2,vt,"ebx",0);
             asm_add(&asmList,buf);
-            asm_add(&asmList,"    add    %%eax, %%ebx");
+            asm_add(&asmList,"    add    %eax, %ebx");
             index=getMemoryIndex(qt->result,vt)+4;
             sprintf(buf,"    mov   %%ebx, %d(%%rsp)",index*4);
             asm_add(&asmList,buf);
@@ -133,7 +134,7 @@ ASMList* transferASMofUbuntu64(QTList *qtList,VariableTable *vt,int tempVar){
             asm_add(&asmList,buf);
             gen_load_arg(buf,qt->arg2,vt,"ebx",0);
             asm_add(&asmList,buf);
-            asm_add(&asmList,"    sub    %%eax, %%ebx");
+            asm_add(&asmList,"    subl    %eax, %ebx");
             index=getMemoryIndex(qt->result,vt)+4;
             sprintf(buf,"    mov   %%ebx, %d(%%rsp)",index*4);
             asm_add(&asmList,buf);
@@ -143,10 +144,21 @@ ASMList* transferASMofUbuntu64(QTList *qtList,VariableTable *vt,int tempVar){
             asm_add(&asmList,buf);
             gen_load_arg(buf,qt->arg2,vt,"ebx",0);
             asm_add(&asmList,buf);
-            asm_add(&asmList,"    mull    %%eax, %%ebx");
+            asm_add(&asmList,"    imull    %ebx, %eax");
             index=getMemoryIndex(qt->result,vt)+4;
-            sprintf(buf,"    mov   %%ebx, %d(%%rsp)",index*4);
+            sprintf(buf,"    mov   %%eax, %d(%%rsp)",index*4);
             asm_add(&asmList,buf);
+        }
+        else if (strcmp(qt->operator, "/") == 0) {
+            gen_load_arg(buf, qt->arg1, vt, "eax", 1);
+            asm_add(&asmList, buf);
+            asm_add(&asmList, "    cdq");                
+            gen_load_arg(buf, qt->arg2, vt, "ebx", 0);
+            asm_add(&asmList, buf);
+            asm_add(&asmList, "    idivl   %ebx");       
+            index = getMemoryIndex(qt->result, vt) + 4;
+            sprintf(buf, "    mov    %%eax, %d(%%rsp)", index * 4);
+            asm_add(&asmList, buf);
         }
         else if (strcmp(qt->operator, "J") == 0) {
             sprintf(buf, "    jmp    .HNU%s", qt->result);
@@ -157,7 +169,7 @@ ASMList* transferASMofUbuntu64(QTList *qtList,VariableTable *vt,int tempVar){
             asm_add(&asmList, buf);
             gen_load_arg(buf, qt->arg2, vt, "ebx", 0);
             asm_add(&asmList, buf);
-            asm_add(&asmList, "    sub    %ebx, %eax");
+            asm_add(&asmList, "    subl    %ebx, %eax");
             sprintf(buf, "    ja    .HNU%s", qt->result);
             asm_add(&asmList, buf);
         }
@@ -166,7 +178,7 @@ ASMList* transferASMofUbuntu64(QTList *qtList,VariableTable *vt,int tempVar){
             asm_add(&asmList, buf);
             gen_load_arg(buf, qt->arg2, vt, "ebx", 0);
             asm_add(&asmList, buf);
-            asm_add(&asmList, "    sub    %ebx, %eax");
+            asm_add(&asmList, "    subl    %ebx, %eax");
             sprintf(buf, "    jb    .HNU%s", qt->result);
             asm_add(&asmList, buf);
         }
@@ -175,7 +187,7 @@ ASMList* transferASMofUbuntu64(QTList *qtList,VariableTable *vt,int tempVar){
             asm_add(&asmList, buf);
             gen_load_arg(buf, qt->arg2, vt, "ebx", 0);
             asm_add(&asmList, buf);
-            asm_add(&asmList, "    sub    %ebx, %eax");
+            asm_add(&asmList, "    subl    %ebx, %eax");
             sprintf(buf, "    jae    .HNU%s", qt->result);
             asm_add(&asmList, buf);
         }
@@ -184,7 +196,7 @@ ASMList* transferASMofUbuntu64(QTList *qtList,VariableTable *vt,int tempVar){
             asm_add(&asmList, buf);
             gen_load_arg(buf, qt->arg2, vt, "ebx", 0);
             asm_add(&asmList, buf);
-            asm_add(&asmList, "    sub    %ebx, %eax");
+            asm_add(&asmList, "    subl    %ebx, %eax");
             sprintf(buf, "    jbe    .HNU%s", qt->result);
             asm_add(&asmList, buf);
         }
@@ -193,7 +205,7 @@ ASMList* transferASMofUbuntu64(QTList *qtList,VariableTable *vt,int tempVar){
             asm_add(&asmList, buf);
             gen_load_arg(buf, qt->arg2, vt, "ebx", 0);
             asm_add(&asmList, buf);
-            asm_add(&asmList, "    sub    %ebx, %eax");
+            asm_add(&asmList, "    subl    %ebx, %eax");
             sprintf(buf, "    jz    .HNU%s", qt->result);
             asm_add(&asmList, buf);
         }
@@ -202,7 +214,7 @@ ASMList* transferASMofUbuntu64(QTList *qtList,VariableTable *vt,int tempVar){
             asm_add(&asmList, buf);
             gen_load_arg(buf, qt->arg2, vt, "ebx", 0);
             asm_add(&asmList, buf);
-            asm_add(&asmList, "    sub    %ebx, %eax");
+            asm_add(&asmList, "    subl    %ebx, %eax");
             sprintf(buf, "    jnz    .HNU%s", qt->result);
             asm_add(&asmList, buf);
         }
@@ -210,7 +222,7 @@ ASMList* transferASMofUbuntu64(QTList *qtList,VariableTable *vt,int tempVar){
             index = getMemoryIndex(qt->result, vt) + 4;
             sprintf(buf, "    mov    %d(%%rsp), %%eax", index * 4);
             asm_add(&asmList, buf);
-            asm_add(&asmList, "    add    $1, %eax");
+            asm_add(&asmList, "    addl    $1, %eax");
             sprintf(buf, "    mov    %%eax, %d(%%rsp)", index * 4);
             asm_add(&asmList, buf);
         }
@@ -218,7 +230,7 @@ ASMList* transferASMofUbuntu64(QTList *qtList,VariableTable *vt,int tempVar){
             index = getMemoryIndex(qt->result, vt) + 4;
             sprintf(buf, "    mov    %d(%%rsp), %%eax", index * 4);
             asm_add(&asmList, buf);
-            asm_add(&asmList, "    sub    $1, %eax");
+            asm_add(&asmList, "    subl    $1, %eax");
             sprintf(buf, "    mov    %%eax, %d(%%rsp)", index * 4);
             asm_add(&asmList, buf);
         }
@@ -251,6 +263,7 @@ ASMList* transferASMofUbuntu64(QTList *qtList,VariableTable *vt,int tempVar){
     asm_add(&asmList, "leave");
     asm_add(&asmList, "ret");
     asm_add(&asmList, ".cfi_endproc");
+    asm_add(&asmList, ".section    .note.GNU-stack,\"\",@progbits");
     
     return &asmList;
 }
