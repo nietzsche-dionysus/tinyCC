@@ -20,3 +20,7 @@ char* vng_gen(void) {
 void vng_clear(void) {
     sequenceId = 0;
 }
+
+int vng_get_count(void) {
+    return sequenceId;
+}

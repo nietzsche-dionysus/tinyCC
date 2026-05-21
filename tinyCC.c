@@ -9,6 +9,7 @@
 #include "QTList.h"
 #include "VariableNameGenerator.h"
 #include "ConditionValue.h"
+#include "LoadASM.h"
 
 #define STATIC 1
 #define UNICODE_INPUT 1
@@ -891,7 +892,7 @@ void OutputStatements(){
     expect(TOKEN_IDENTIFIER);
     expect(TOKEN_RC);
     expect(TOKEN_SEMICOLON);
-    QTInfo *qt=qt_create("I","_","_",t.image);
+    QTInfo *qt=qt_create("O","_","_",t.image);
     qtl_add(&qtList,qt);
 }
 
@@ -914,6 +915,10 @@ int main(int argc, char *argv[]) {
     printf("共定义了%d个变量!\n",vt.count);
     vt_print(&vt);
     qtl_print(&qtList);
+    ASMList *asmCode = transferASMofUbuntu64(&qtList, &vt, vng_get_count());
+    for (int i = 0; i < asmCode->count; i++) {
+        printf("%s\n", asmCode->lines[i]);
+    }
     printf("Parser Success!\n");
     
     free(buffer);
